@@ -24,13 +24,48 @@ git commit -m "chore: initialize Muse with GitHub Actions CI"
 git push -u origin main
 ```
 
-Первый push создаёт `main` и запускает CI. Фактический результат публикации и проверки GitHub будет записан ниже после выполнения; этот журнал будет обновлён отдельным коммитом.
+Первый коммит [`b342cf96ce54559b11e6c95fbbd6656ebfbee408`](https://github.com/vladSHOKO/Muse/commit/b342cf96ce54559b11e6c95fbbd6656ebfbee408) создан и отправлен в `main`. GitHub принял новую ветку, локальная `main` отслеживает `origin/main`. Опубликованы 96 файлов, включая этот журнал. Репозиторий имеет публичную видимость; настройка видимости не менялась.
+
+Перед коммитом `git diff --cached --check` обнаружил один пробел в конце строки теста; пробел удалён, проверка пройдена. Дополнительная проверка подготовленных файлов на распространённые форматы приватных ключей и GitHub/AWS-токенов совпадений не обнаружила.
+
+## Результат CI
+
+Первый push автоматически запустил [CI № 34764730038](https://github.com/vladSHOKO/Muse/actions/runs/34764730038) для коммита `b342cf9`. Через GitHub API подтверждены `status: completed`, `conclusion: success`.
+
+| Проверка | Результат |
+| --- | --- |
+| PHP 8.2 / PostgreSQL 17 | Успешно |
+| PHP 8.4 / PostgreSQL 17 | Успешно |
+
+Оба job установили зависимости по lock-файлу, применили миграции к чистой тестовой БД, проверили схему и выполнили предусмотренные workflow проверки. Также автоматически запустились задания Dependabot. Их обновления рассматриваются отдельными pull request и в эту первичную публикацию не включаются.
+
+Результаты публикации и CI сохраняются следующим документирующим коммитом:
+
+```bash
+git add docs/REPOSITORY_SETUP.md AGENTS.md
+git diff --cached --check
+git commit -m "docs: record repository publication and successful CI"
+git push origin main
+```
+
+Этот push также запускает CI. Для проверки последующих коммитов откройте [Actions → CI](https://github.com/vladSHOKO/Muse/actions/workflows/ci.yml) и сопоставьте SHA запуска с `git rev-parse HEAD`. Результат одного запуска относится к его SHA, а не ко всем будущим изменениям.
 
 ## Завершение настройки GitHub
 
 После успешного CI нужно включить обязательные проверки `PHP 8.2 / PostgreSQL 17` и `PHP 8.4 / PostgreSQL 17`, pull request перед слиянием, актуальность ветки, запрет force push и удаления `main`; оставить squash merge и включить удаление слитых веток. Для единственного разработчика обязательное одобрение другого участника не нужно. Настройки GitHub не задаются самим файлом workflow.
 
-SSH позволяет отправлять Git-коммиты, но не заменяет авторизацию GitHub API для изменения настроек. На момент подготовки `gh` отсутствует, `GH_TOKEN`/`GITHUB_TOKEN` и сохранённая авторизация `gh` не обнаружены. Доступность чтения CI и настройки защиты проверяется отдельно; отсутствие доступа будет отмечено явно.
+Чтение CI через публичный GitHub API работает. Для изменения настроек доступ отсутствует: `gh` не установлен, `GH_TOKEN`/`GITHUB_TOKEN` и сохранённая авторизация `gh` не обнаружены. SSH позволяет отправлять Git-коммиты, но не заменяет авторизацию API. Защита ветки и настройки слияния в рамках этой публикации пока не изменены.
+
+Пользователю предложено установить GitHub CLI и выполнить `gh auth login`, не передавая токен в чат, либо применить настройки вручную. После авторизации настройку следует завершить и обновить этот журнал отдельным коммитом.
+
+Точные действия вручную:
+
+1. Settings → General → Pull Requests: включить Allow squash merging и Automatically delete head branches; отключить merge commits и rebase merging.
+2. Settings → Branches → Add classic branch protection rule, шаблон ветки `main`.
+3. Включить Require a pull request before merging; обязательное число approvals не задавать для одного разработчика.
+4. Включить Require status checks to pass before merging и Require branches to be up to date before merging. Выбрать оба названия проверок из таблицы выше.
+5. Включить Do not allow bypassing the above settings. Allow force pushes и Allow deletions оставить выключенными.
+6. Сохранить правило и проверить, что GitHub показывает `main` как protected. Защиту настраивать после завершения первичной публикации; следующие изменения отправлять через pull request.
 
 ## Граница текущего этапа
 
