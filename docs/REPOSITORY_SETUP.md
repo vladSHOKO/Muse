@@ -88,7 +88,7 @@ gh api repos/vladSHOKO/Muse --jq '{allow_squash_merge, allow_merge_commit, allow
 
 ## Проверка рабочего процесса после включения защиты
 
-Итоговая запись этого журнала отправляется из ветки `docs/complete-repository-setup` через pull request. Так проверяется обычный путь разработки при уже включённой защите:
+Итоговая запись этого журнала отправляется из ветки `docs/complete-repository-setup` через [pull request № 2](https://github.com/vladSHOKO/Muse/pull/2). Во время выполнения обоих обязательных CI-job GitHub API подтвердил `mergeStateStatus: BLOCKED`: слияние ожидает проверок. Повторное чтение API подтвердило сохранение всех параметров защиты. Так проверяется обычный путь разработки при уже включённой защите:
 
 ```bash
 git switch -c docs/complete-repository-setup
