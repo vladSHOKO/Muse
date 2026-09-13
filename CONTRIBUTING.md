@@ -49,11 +49,12 @@ Dependabot раз в неделю предлагает обновления Comp
 
 До первого push проверьте `git status --short` и `git diff --cached`. Для пустого удалённого репозитория начальный коммит отправляется командой `git push -u origin main`. Если удалённая история уже есть, сначала получите её и согласуйте изменения; не используйте force push для первичной настройки.
 
-После первого успешного CI настройте защиту `main` в GitHub (Settings → Rules → Rulesets либо Branches):
+Защита `main` настроена после первого успешного CI. При восстановлении настроек используйте GitHub (Settings → Rules → Rulesets либо Branches):
 
 - Pull request перед слиянием; для единственного разработчика — без обязательного одобрения другого человека.
 - Обязательные проверки `PHP 8.2 / PostgreSQL 17` и `PHP 8.4 / PostgreSQL 17`; актуальная ветка перед слиянием.
 - Запрет force push и удаления `main`.
+- Применение правил к администратору: обход защиты выключен.
 - Squash merge и автоматическое удаление слитых веток в настройках репозитория.
 
 Доступность защиты для приватного репозитория зависит от тарифа GitHub. Workflow сам не включает защиту ветки. См. [документацию GitHub](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
