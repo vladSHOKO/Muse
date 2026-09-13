@@ -1,0 +1,3 @@
+{% extends 'base.html.twig' %}
+{% block title %}Загрузка файлов — Muse{% endblock %}
+{% block body %}<a class="back-link" href="{{ path('app_task_show', {id: task.id}) }}">← К задаче</a><div class="narrow"><h1>Прикрепить файлы</h1><p class="muted">{{ task.title }}</p><section class="panel form-panel">{{ form_start(form, {action: path('app_attachment_upload', {id: task.id}), attr: {class: 'stack'}}) }}{{ form_widget(form) }}<button class="button" type="submit">Прикрепить файлы</button>{{ form_end(form) }}</section></div>{% endblock %}

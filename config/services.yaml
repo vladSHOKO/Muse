@@ -1,0 +1,13 @@
+parameters:
+  app.upload_dir: '%kernel.project_dir%/%env(UPLOAD_DIR)%'
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+  App\:
+    resource: '../src/'
+    exclude: '../src/{Entity,Kernel.php}'
+  App\Service\FileStorage:
+    arguments:
+      $directory: '%app.upload_dir%'
+  Psr\Clock\ClockInterface: '@clock'

@@ -1,0 +1,42 @@
+{% extends 'base.html.twig' %}
+{% block body %}
+<a class="back-link" href="{{ path('app_tasks') }}">← Все блоки</a>
+<div class="page-heading">
+    <div><p class="eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</p><h1>Задачи блока<span class="accent">.</span></h1><p class="muted">Один блок в фокусе. Все шаги перед глазами.</p></div>
+</div>
+<div class="workspace">
+    <aside class="panel block-sidebar">
+        <h2 id="block-navigation-title">Блоки задач</h2>
+        <nav class="block-navigation" aria-labelledby="block-navigation-title">
+            {% for block in blocks %}
+                <a class="block-link {{ selected == block.id ? 'active' : '' }}" href="{{ path('app_tasks', {block: block.id}) }}" {% if selected == block.id %}aria-current="page"{% endif %}>
+                    <span class="group-dot" aria-hidden="true"></span><span class="block-name">{{ block.title }}</span><span class="count" aria-label="Задач: {{ counts[block.id]|default(0) }}">{{ counts[block.id]|default(0) }}</span>
+                </a>
+            {% endfor %}
+
+        </nav>
+    </aside>
+    <section class="block-workspace" aria-label="Задачи выбранного блока">
+            <div class="selected-block-heading">
+                <div><p class="eyebrow">ТЕКУЩИЙ БЛОК</p><h2>{{ selected_block.title }}</h2></div>
+                <div class="actions">
+                    <a class="button" href="{{ path('app_task_new', {block: selected}) }}">＋ Новая задача</a>
+                    <a class="button secondary" href="{{ path('app_block_edit', {id: selected_block.id}) }}">Изменить блок</a>
+                </div>
+            </div>
+            <div class="stats"><div><span class="stat-value">{{ total }}</span><span class="muted">задач в блоке</span></div><div><span class="stat-value">{{ total - completed }}</span><span class="muted">активных</span></div><div><span class="stat-value accent">{{ completed }}</span><span class="muted">выполнено</span></div></div>
+            <nav class="task-status-tabs" aria-label="Состояние задач">
+                <a class="button {{ status == 'open' ? '' : 'secondary' }}" href="{{ path('app_tasks', {block: selected, status: 'open'}) }}" {% if status == 'open' %}aria-current="page"{% endif %}>Активные ({{ total - completed }})</a>
+                <a class="button {{ status == 'completed' ? '' : 'secondary' }}" href="{{ path('app_tasks', {block: selected, status: 'completed'}) }}" {% if status == 'completed' %}aria-current="page"{% endif %}>Завершённые ({{ completed }})</a>
+            </nav>
+            <p class="sort-note">По приоритету: 1–5, затем без приоритета</p>
+            <div class="block-task-list">
+                {% for task in tasks %}
+                    {% include 'task/_card.html.twig' with {task: task, context: 'block', form: checklist_forms[task.id], now: now} only %}
+                {% else %}
+                    <div class="panel empty block-empty"><span class="empty-symbol" aria-hidden="true">＋</span><h3>{{ status == 'completed' ? 'Завершённых задач пока нет' : 'Активных задач нет' }}</h3><p class="muted">{{ status == 'completed' ? 'Выполненные задачи появятся в этой вкладке. Их можно открыть снова.' : 'Создайте задачу или откройте снова одну из завершённых.' }}</p></div>
+                {% endfor %}
+            </div>
+    </section>
+</div>
+{% endblock %}

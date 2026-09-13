@@ -1,0 +1,31 @@
+{% extends 'base.html.twig' %}
+{% block body %}
+<div class="page-heading">
+    <div><p class="eyebrow">ЛИЧНОЕ ПРОСТРАНСТВО</p><h1>Мои блоки<span class="accent">.</span></h1><p class="muted">До трёх текущих задач в каждом блоке — сначала самые приоритетные.</p></div>
+    <a class="button" href="{{ path('app_block_new') }}">＋ Новый блок</a>
+</div>
+<div class="blocks-overview">
+    {% for block in blocks %}
+        {% set active_count = counts[block.id]|default(0) - completed_counts[block.id]|default(0) %}
+        <section class="panel block-preview" data-block-id="{{ block.id }}" aria-labelledby="block-title-{{ block.id }}">
+            <a class="block-preview-heading" href="{{ path('app_tasks', {block: block.id}) }}">
+                <span class="group-dot" aria-hidden="true"></span><h2 id="block-title-{{ block.id }}">{{ block.title }}</h2>
+                <span class="count" aria-label="Активных задач: {{ active_count }}">{{ active_count }}</span><span aria-hidden="true">↗</span>
+            </a>
+            <div class="preview-task-list">
+                {% for task in previews[block.id]|default([]) %}
+                    {% include 'task/_card.html.twig' with {task: task, context: 'overview', form: checklist_forms[task.id], now: now} only %}
+                {% else %}
+                    <p class="preview-empty muted">{{ counts[block.id]|default(0) ? 'Все задачи выполнены.' : 'В этом блоке пока нет задач.' }}</p>
+                {% endfor %}
+            </div>
+            <div class="block-preview-footer">
+                <a class="button secondary small" href="{{ path('app_task_new', {block: block.id}) }}">＋ Новая задача</a>
+                <a class="text-link" href="{{ path('app_tasks', {block: block.id}) }}">Все задачи ({{ active_count }}) →</a>
+            </div>
+        </section>
+    {% else %}
+        <section class="panel empty blocks-empty"><span class="large-symbol" aria-hidden="true">＋</span><h2>Начните с первого блока</h2><p class="muted">Создайте блок для проекта, работы или личных дел, чтобы добавлять задачи.</p><a class="button" href="{{ path('app_block_new') }}">Создать блок</a></section>
+    {% endfor %}
+</div>
+{% endblock %}

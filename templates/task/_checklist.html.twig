@@ -1,0 +1,39 @@
+<div class="checklist" id="checklist-{{ task.id }}">
+    <div class="checklist-heading">
+        <h3>Чек-лист</h3><span class="count checklist-progress" aria-live="polite" aria-label="Выполнено пунктов">{{ task.checklistCompletedCount }}/{{ task.checklist|length }}</span>
+        {% if not public_access and context == 'overview' %}
+            <button type="button" class="button quiet small checklist-collapse" data-checklist-collapse="{{ task.owner.id }}.{{ task.id }}" aria-expanded="true" aria-controls="checklist-content-{{ task.id }}" hidden>Свернуть</button>
+        {% endif %}
+    </div>
+    <div id="checklist-content-{{ task.id }}">
+    <ul class="checklist-items">
+        {% for item in task.checklist %}
+            <li class="checklist-item {{ item.completed ? 'is-done' : '' }}">
+                {% if public_access %}
+                    <span class="checklist-readonly"><span class="task-state" aria-label="{{ item.completed ? 'Выполнено' : 'Не выполнено' }}">{{ item.completed ? '✓' : '' }}</span><span class="checklist-title">{{ item.title }}</span></span>
+                {% else %}
+                    <form class="checklist-complete" method="post" action="{{ path('app_checklist_complete', {id: item.id}) }}" data-checklist-complete>
+                        <input type="hidden" name="_token" value="{{ csrf_token('checklist-complete' ~ item.id) }}">
+                        <input type="hidden" name="completed" value="{{ item.completed ? '0' : '1' }}">
+                        <input type="hidden" name="context" value="{{ context }}">
+                        <button class="checklist-toggle" type="submit" role="checkbox" aria-checked="{{ item.completed ? 'true' : 'false' }}"><span class="task-state" aria-hidden="true">{{ item.completed ? '✓' : '' }}</span><span class="checklist-title">{{ item.title }}</span></button>
+                    </form>
+                    <form method="post" action="{{ path('app_checklist_delete', {id: item.id}) }}" data-confirm="Удалить этот пункт чек-листа?">
+                        <input type="hidden" name="_token" value="{{ csrf_token('checklist-delete' ~ item.id) }}">
+                        <input type="hidden" name="context" value="{{ context }}">
+                        <button class="button quiet small checklist-delete" type="submit" aria-label="Удалить пункт «{{ item.title }}»">×</button>
+                    </form>
+                {% endif %}
+            </li>
+        {% else %}<li class="checklist-empty muted">Пунктов пока нет.</li>{% endfor %}
+    </ul>
+    {% if not public_access %}
+        <p class="checklist-error" role="alert" hidden></p>
+        {{ form_start(form, {attr: {class: 'checklist-add'}}) }}
+            {{ form_errors(form) }}
+            <div class="checklist-add-field">{{ form_label(form.title, null, {label_attr: {class: 'visually-hidden'}}) }}{{ form_widget(form.title) }}{{ form_errors(form.title) }}</div>
+            <button class="button secondary small" type="submit">Добавить</button>
+        {{ form_end(form) }}
+    {% endif %}
+    </div>
+</div>

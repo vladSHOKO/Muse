@@ -1,0 +1,23 @@
+<fieldset class="priority-picker" aria-describedby="{{ priority.vars.id }}_help">
+    <legend>Приоритет</legend>
+    <div class="priority-scale" aria-hidden="true"><span>Наивысший</span><span>Наименьший</span></div>
+    <div class="priority-options">
+        {% for choice in priority %}
+            {% set value = choice.vars.value %}
+            <div class="priority-option {{ value == '' ? 'priority-option-none' : 'priority-level-' ~ value }}">
+                {{ form_widget(choice, {attr: {class: 'priority-input', 'aria-label': choice.vars.label}}) }}
+                <label for="{{ choice.vars.id }}" class="priority-button">
+                    {% if value == '' %}
+                        <span>Без приоритета</span>
+                    {% else %}
+                        <span class="priority-number">{{ value }}</span>
+                        <span class="priority-meter" aria-hidden="true">{% for bar in 1..5 %}<i class="{{ bar <= 6 - value ? 'filled' : '' }}"></i>{% endfor %}</span>
+                    {% endif %}
+                    <span class="priority-check" aria-hidden="true">✓</span>
+                </label>
+            </div>
+        {% endfor %}
+    </div>
+    {{ form_errors(priority) }}
+    {{ form_help(priority) }}
+</fieldset>

@@ -1,0 +1,6 @@
+{% extends 'base.html.twig' %}
+{% block title %}Чек-лист — Muse{% endblock %}
+{% block body %}
+<a class="back-link" href="{{ path('app_task_show', {id: task.id}) }}#checklist-{{ task.id }}">← К задаче</a>
+<div class="narrow"><h1>Добавить пункт</h1><p class="muted">{{ task.title }}</p><section class="panel form-panel">{{ form_start(form, {attr: {class: 'stack'}}) }}{{ form_widget(form) }}<button class="button" type="submit">Добавить</button>{{ form_end(form) }}</section></div>
+{% endblock %}

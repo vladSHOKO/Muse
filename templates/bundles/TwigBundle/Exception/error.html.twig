@@ -1,0 +1,3 @@
+{% extends 'base.html.twig' %}
+{% block title %}Страница недоступна — Muse{% endblock %}
+{% block body %}<div class="narrow"><section class="panel form-panel empty-page"><p class="eyebrow">{{ status_code }}</p><h1>Страница недоступна</h1><p class="muted">Проверьте адрес или вернитесь к списку задач. Если действие не удалось, обновите страницу и попробуйте ещё раз.</p><a class="button" href="{{ path('app_tasks') }}">К моим задачам</a></section></div>{% endblock %}

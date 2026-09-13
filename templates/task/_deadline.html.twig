@@ -1,0 +1,3 @@
+{% if task.deadline %}
+    <span class="badge deadline-badge {{ task.overdue(now) ? 'overdue' : '' }}">{{ task.overdue(now) ? 'Просрочена · ' : 'Дедлайн · ' }}<time datetime="{{ task.deadline|date('c', 'UTC') }}">{{ task.deadline|date('d.m.Y H:i', 'Europe/Moscow') }} МСК</time></span>
+{% endif %}

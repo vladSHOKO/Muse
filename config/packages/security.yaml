@@ -1,0 +1,37 @@
+security:
+  password_hashers:
+    Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: auto
+  providers:
+    app_users:
+      id: App\Security\EmailUserProvider
+  firewalls:
+    dev:
+      pattern: ^/(_(profiler|wdt)|assets)/
+      security: false
+    main:
+      lazy: true
+      provider: app_users
+      form_login:
+        login_path: app_login
+        check_path: app_login
+        enable_csrf: true
+        default_target_path: app_tasks
+      login_throttling:
+        max_attempts: 5
+        interval: '1 minute'
+      logout:
+        path: app_logout
+        target: app_login
+        enable_csrf: true
+  access_control:
+    - { path: ^/(login|register)$, roles: PUBLIC_ACCESS }
+    - { path: ^/s/, roles: PUBLIC_ACCESS }
+    - { path: ^/, roles: ROLE_USER }
+when@test:
+  security:
+    password_hashers:
+      Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
+        algorithm: auto
+        cost: 4
+        time_cost: 3
+        memory_cost: 10

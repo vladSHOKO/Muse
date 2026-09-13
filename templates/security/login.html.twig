@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+{% block title %}Вход — Muse{% endblock %}
+{% block body %}
+<div class="auth-layout">
+    <div class="auth-intro"><p class="eyebrow">ВАШ ЛИЧНЫЙ ПОРЯДОК</p><h1>Освободите место<br>для главного<span class="accent">.</span></h1><p class="lead">Соберите задачи, детали и документы в одном месте. Двигайтесь в своём темпе.</p><div class="intro-note"><span class="mini-mark">✓</span> Ваши задачи доступны только вам — пока вы сами не поделитесь ссылкой.</div></div>
+    <section class="panel auth-panel"><h2>С возвращением</h2><p class="muted">Войдите, чтобы продолжить свои дела.</p>
+        {% if error %}<div class="flash error" role="alert">{{ error.messageKey|trans(error.messageData, 'security') }}</div>{% endif %}
+        <form method="post" action="{{ path('app_login') }}" class="stack">
+            <div><label for="username">Электронная почта</label><input id="username" name="_username" type="email" value="{{ last_username }}" autocomplete="username" maxlength="180" required autofocus></div>
+            <div><label for="password">Пароль</label><input id="password" name="_password" type="password" autocomplete="current-password" required></div>
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+            <button class="button full" type="submit">Войти →</button>
+        </form>
+        <p class="auth-switch">Первый раз здесь? <a href="{{ path('app_register') }}">Создать аккаунт</a></p>
+    </section>
+</div>
+{% endblock %}

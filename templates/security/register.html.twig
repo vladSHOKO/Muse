@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+{% block title %}Регистрация — Muse{% endblock %}
+{% block body %}
+<div class="auth-layout">
+    <div class="auth-intro"><p class="eyebrow">НАЧНИТЕ С ОДНОЙ ЗАДАЧИ</p><h1>Большие планы.<br>Понятные шаги<span class="accent">.</span></h1><p class="lead">Добавляйте к задачам чек-листы, объединяйте задачи в блоки и держите нужные файлы рядом.</p><div class="intro-note"><span class="mini-mark">↗</span> Делитесь нужным: ссылка на задачу работает 24 часа.</div></div>
+    <section class="panel auth-panel"><h2>Создать аккаунт</h2><p class="muted">Только почта и пароль — и можно начинать.</p>
+        {{ form_start(form, {attr: {class: 'stack'}}) }}{{ form_widget(form) }}<button class="button full" type="submit">Зарегистрироваться →</button>{{ form_end(form) }}
+        <p class="auth-switch">Уже есть аккаунт? <a href="{{ path('app_login') }}">Войти</a></p>
+    </section>
+</div>
+{% endblock %}

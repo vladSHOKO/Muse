@@ -1,0 +1,6 @@
+<ul class="file-list">
+{% for file in task.attachments %}
+    <li><a class="file-link" href="{{ public_access ? path('app_share_download', {token: token, id: file.id}) : path('app_attachment_download', {id: file.id}) }}"><span class="file-icon" aria-hidden="true">↓</span><span><strong>{{ file.originalName }}</strong><small>{{ (file.size / 1000000)|number_format(2, ',', ' ') }} МБ · Скачать</small></span></a>
+    {% if not public_access %}<form method="post" action="{{ path('app_attachment_delete', {id: file.id}) }}" data-confirm="Удалить файл? Он станет недоступен и по общим ссылкам."><input type="hidden" name="_token" value="{{ csrf_token('delete-file' ~ file.id) }}"><button class="button quiet small danger-text" type="submit">Удалить</button></form>{% endif %}</li>
+{% else %}<li class="muted">Файлов пока нет.</li>{% endfor %}
+</ul>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f7f8">
+    <link rel="icon" href="{{ asset('assets/favicon.svg') }}" type="image/svg+xml">
+    <title>{% block title %}Muse — личные задачи{% endblock %}</title>
+    <link rel="stylesheet" href="{{ asset('assets/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/cat.css') }}">
+    <script src="{{ asset('assets/app.js') }}" defer></script>
+    <script src="{{ asset('assets/cat.js') }}" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">К содержимому</a>
+<header class="topbar">
+    {% include '_cat.html.twig' %}
+    <a class="brand" href="{{ path('app_tasks') }}"><span class="brand-mark" aria-hidden="true">M</span>Muse<span class="brand-caption">место для ваших дел</span></a>
+    <nav aria-label="Основная навигация">
+        {% if app.user and not public_view|default(false) %}
+            <a href="{{ path('app_tasks') }}">Мои блоки</a>
+            <span class="account">{{ app.user.email }}</span>
+            <form action="{{ path('app_logout') }}" method="post" class="inline-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
+                <button class="button quiet small" type="submit">Выйти</button>
+            </form>
+        {% elseif not public_view|default(false) %}
+            <a href="{{ path('app_login') }}">Войти</a>
+        {% else %}
+            <span class="badge">Доступ по ссылке · Только просмотр</span>
+        {% endif %}
+    </nav>
+</header>
+<main id="main" class="container">
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}<div class="flash {{ type }}" role="status">{{ message }}</div>{% endfor %}
+    {% endfor %}
+    {% block body %}{% endblock %}
+</main>
+<footer class="footer">Muse. Одно дело за другим. <button class="cat-toggle" type="button" data-cat-toggle aria-pressed="true" hidden>Скрыть котика</button></footer>
+</body>
+</html>

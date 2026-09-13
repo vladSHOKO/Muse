@@ -1,0 +1,11 @@
+/.env.local
+/.env.*.local
+/vendor/
+/var/
+/.phpunit.cache/
+/.idea/
+/config/reference.php
+/.env.local.php
+/.agents/
+/.codex/
+/.DS_Store

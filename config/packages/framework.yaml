@@ -1,0 +1,22 @@
+framework:
+  secret: '%env(APP_SECRET)%'
+  assets:
+    version: 'muse-priority-compact-1'
+  default_locale: ru
+  csrf_protection: true
+  form: true
+  validation: { email_validation_mode: html5 }
+  translator: { fallbacks: ['en'] }
+  session:
+    cookie_secure: auto
+    cookie_httponly: true
+    cookie_samesite: lax
+  php_errors:
+    log: true
+  router:
+    utf8: true
+when@test:
+  framework:
+    test: true
+    session:
+      storage_factory_id: session.storage.factory.mock_file

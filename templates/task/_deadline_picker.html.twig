@@ -1,0 +1,27 @@
+<dialog id="deadline-picker" class="deadline-picker" aria-labelledby="deadline-picker-title" aria-describedby="deadline-picker-hint">
+    <div class="deadline-picker-heading">
+        <div><h2 id="deadline-picker-title">Дедлайн задачи</h2><p id="deadline-picker-hint" class="muted">Дата и время по Москве (МСК)</p></div>
+        <button type="button" class="button quiet calendar-arrow" data-deadline-cancel aria-label="Закрыть">×</button>
+    </div>
+    <div class="deadline-shortcuts" aria-label="Быстрый выбор даты">
+        <button type="button" class="button secondary small" data-deadline-offset="0">Сегодня</button>
+        <button type="button" class="button secondary small" data-deadline-offset="1">Завтра</button>
+        <button type="button" class="button secondary small" data-deadline-offset="7">Через неделю</button>
+    </div>
+    <div class="calendar-heading">
+        <button type="button" class="button secondary calendar-arrow" data-calendar-prev aria-label="Предыдущий месяц">‹</button>
+        <strong data-calendar-month aria-live="polite"></strong>
+        <button type="button" class="button secondary calendar-arrow" data-calendar-next aria-label="Следующий месяц">›</button>
+    </div>
+    <div class="calendar-weekdays" aria-hidden="true"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+    <div class="calendar-days" data-calendar-days role="group" aria-label="Выберите день. Стрелки перемещают фокус по дням, Enter выбирает дату."></div>
+    <div class="deadline-time-row">
+        <label for="deadline-picker-time">Время <span class="muted">МСК</span></label>
+        <input type="text" id="deadline-picker-time" required maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="ЧЧ:ММ" title="Время от 00:00 до 23:59, например 18:30" autocomplete="off" value="18:00">
+    </div>
+    <p class="deadline-selection" data-deadline-selection aria-live="polite"></p>
+    <div class="deadline-picker-footer">
+        <button type="button" class="button quiet" data-deadline-clear>Без срока</button>
+        <div class="actions"><button type="button" class="button secondary" data-deadline-cancel>Отмена</button><button type="button" class="button" data-deadline-apply>Применить</button></div>
+    </div>
+</dialog>

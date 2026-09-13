@@ -1,0 +1,19 @@
+<article class="panel task-card {{ task.overdue(now) ? 'task-overdue' : '' }}" data-task-id="{{ task.id }}">
+    <a class="task-row main-task-link {{ task.completed ? 'is-done' : '' }}" href="{{ path('app_task_show', {id: task.id}) }}">
+        <span class="task-state" aria-label="{{ task.completed ? 'Выполнена' : 'Активна' }}">{{ task.completed ? '✓' : '' }}</span>
+        <div class="task-summary"><strong>{{ task.title }}</strong>{% if task.description %}<p>{{ task.description|slice(0, 130) }}{{ task.description|length > 130 ? '…' : '' }}</p>{% endif %}<div class="task-meta"><span>{{ task.completed ? 'Выполнена' : 'Активна' }}</span><span class="priority-badge">{{ task.priority is null ? 'Без приоритета' : 'Приоритет: ' ~ task.priority }}</span>{% include 'task/_deadline.html.twig' with {task: task, now: now} only %}</div></div>
+        <span class="row-arrow" aria-hidden="true">↗</span>
+    </a>
+    <div class="task-card-actions">
+        <form method="post" action="{{ path('app_task_toggle', {id: task.id}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('toggle' ~ task.id) }}">
+            <input type="hidden" name="context" value="{{ context }}">
+            <input type="hidden" name="completed" value="{{ task.completed ? '0' : '1' }}">
+            <button class="button secondary small" type="submit">{{ task.completed ? 'Открыть снова' : '✓ Завершить' }}</button>
+        </form>
+        <a class="text-link" href="{{ path('app_task_edit', {id: task.id}) }}">Редактировать</a>
+    </div>
+    {% if context != 'overview' or task.checklist|length > 0 %}
+        <div class="inline-checklist">{% include 'task/_checklist.html.twig' with {task: task, public_access: false, context: context, form: form} only %}</div>
+    {% endif %}
+</article>
