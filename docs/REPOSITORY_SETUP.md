@@ -39,7 +39,7 @@ git push -u origin main
 
 Оба job установили зависимости по lock-файлу, применили миграции к чистой тестовой БД, проверили схему и выполнили предусмотренные workflow проверки. Также автоматически запустились задания Dependabot. Их обновления рассматриваются отдельными pull request и в эту первичную публикацию не включаются.
 
-Результаты публикации и CI сохраняются следующим документирующим коммитом:
+Результаты публикации и CI сохранены документирующим коммитом `d49ca6d`:
 
 ```bash
 git add docs/REPOSITORY_SETUP.md AGENTS.md
@@ -48,15 +48,34 @@ git commit -m "docs: record repository publication and successful CI"
 git push origin main
 ```
 
-Этот push также запускает CI. Для проверки последующих коммитов откройте [Actions → CI](https://github.com/vladSHOKO/Muse/actions/workflows/ci.yml) и сопоставьте SHA запуска с `git rev-parse HEAD`. Результат одного запуска относится к его SHA, а не ко всем будущим изменениям.
+Для этого коммита также успешно прошёл [CI № 34765977078](https://github.com/vladSHOKO/Muse/actions/runs/34765977078). Для проверки последующих коммитов откройте [Actions → CI](https://github.com/vladSHOKO/Muse/actions/workflows/ci.yml) и сопоставьте SHA запуска с `git rev-parse HEAD`. Результат одного запуска относится к его SHA, а не ко всем будущим изменениям.
 
 ## Завершение настройки GitHub
 
-После успешного CI нужно включить обязательные проверки `PHP 8.2 / PostgreSQL 17` и `PHP 8.4 / PostgreSQL 17`, pull request перед слиянием, актуальность ветки, запрет force push и удаления `main`; оставить squash merge и включить удаление слитых веток. Для единственного разработчика обязательное одобрение другого участника не нужно. Настройки GitHub не задаются самим файлом workflow.
+После успешного CI настроена защита `main`. Фактические параметры проверены через GitHub API:
 
-Чтение CI через публичный GitHub API работает. Для изменения настроек доступ отсутствует: `gh` не установлен, `GH_TOKEN`/`GITHUB_TOKEN` и сохранённая авторизация `gh` не обнаружены. SSH позволяет отправлять Git-коммиты, но не заменяет авторизацию API. Защита ветки и настройки слияния в рамках этой публикации пока не изменены.
+| Параметр | Итоговое значение |
+| --- | --- |
+| Pull request перед слиянием | Обязателен |
+| Проверки | `PHP 8.2 / PostgreSQL 17`, `PHP 8.4 / PostgreSQL 17` |
+| Актуальная ветка перед слиянием | Обязательна (`strict: true`) |
+| Защита распространяется на администратора | Да (`enforce_admins: true`) |
+| Обязательные approvals | 0: проект ведёт один разработчик |
+| Сброс устаревших approvals после изменений | Включён |
+| Force push и удаление `main` | Запрещены |
+| Способ слияния | Только squash merge |
+| Автоматическое удаление слитых веток | Включено |
 
-Пользователю предложено установить GitHub CLI и выполнить `gh auth login`, не передавая токен в чат, либо применить настройки вручную. После авторизации настройку следует завершить и обновить этот журнал отдельным коммитом.
+Настройки GitHub не задаются самим файлом workflow. При первичной публикации был доступен только SSH и публичное чтение API. Для завершения скачан официальный GitHub CLI 2.100.0 из `cli/cli`, SHA-256 архива проверен по digest релиза; временный бинарник размещён вне репозитория. Запущен `gh auth login --hostname github.com --git-protocol ssh --web --skip-ssh-key`. Пользователь подтвердил вход в браузере; CLI сообщил авторизацию как `vladSHOKO`, API подтвердил права администратора Muse. Пароль, токен и одноразовый код в документацию не включаются.
+
+После входа повторная проверка обнаружила уже включённые squash merge, удаление слитых веток и базовое правило защиты. Однако список обязательных CI-проверок был пуст, а `enforce_admins` выключен. Через `PUT /repos/vladSHOKO/Muse/branches/main/protection` записаны параметры из таблицы выше. Настройки слияния уже соответствовали выбранному процессу и были сохранены.
+
+GitHub CLI нужен только для управления репозиторием, приложение от него не зависит. В новой среде его можно установить обычным способом, выполнить `gh auth login` и проверить настройки командами:
+
+```bash
+gh api repos/vladSHOKO/Muse/branches/main/protection
+gh api repos/vladSHOKO/Muse --jq '{allow_squash_merge, allow_merge_commit, allow_rebase_merge, delete_branch_on_merge}'
+```
 
 Точные действия вручную:
 
@@ -66,6 +85,26 @@ git push origin main
 4. Включить Require status checks to pass before merging и Require branches to be up to date before merging. Выбрать оба названия проверок из таблицы выше.
 5. Включить Do not allow bypassing the above settings. Allow force pushes и Allow deletions оставить выключенными.
 6. Сохранить правило и проверить, что GitHub показывает `main` как protected. Защиту настраивать после завершения первичной публикации; следующие изменения отправлять через pull request.
+
+## Проверка рабочего процесса после включения защиты
+
+Итоговая запись этого журнала отправляется из ветки `docs/complete-repository-setup` через [pull request № 2](https://github.com/vladSHOKO/Muse/pull/2). Во время выполнения обоих обязательных CI-job GitHub API подтвердил `mergeStateStatus: BLOCKED`: слияние ожидает проверок. Повторное чтение API подтвердило сохранение всех параметров защиты. Так проверяется обычный путь разработки при уже включённой защите:
+
+```bash
+git switch -c docs/complete-repository-setup
+# Обновить журнал и AGENTS.md
+git add docs/REPOSITORY_SETUP.md AGENTS.md CONTRIBUTING.md
+git diff --cached --check
+git commit -m "docs: complete GitHub repository setup log"
+git push -u origin docs/complete-repository-setup
+gh pr create --base main --head docs/complete-repository-setup --title "docs: complete GitHub repository setup log" --body-file /tmp/muse-setup-pr.md
+gh pr checks --required --watch
+gh pr merge --squash --delete-branch
+git switch main
+git pull --ff-only
+```
+
+Содержимое PR — результаты публикации и CI, авторизации и проверки настроек GitHub. Точный запуск CI привязан к коммиту PR и виден на вкладке Checks; факт squash merge и итоговый коммит фиксируются в истории PR и `main`. После слияния запускается отдельный CI для `main`. Отключение защиты и обход администратором не входят в этот процесс.
 
 ## Граница текущего этапа
 
