@@ -1,6 +1,6 @@
 # Muse — таск-трекер
 
-Production на FirstVDS и процесс выпуска: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Первый запуск по решению пользователя — HTTP по IP; подключение домена и HTTPS выполняется отдельно.
+Production: [http://155.212.164.198](http://155.212.164.198). FirstVDS и процесс выпуска: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Первый запуск по решению пользователя — HTTP по IP; подключение домена и HTTPS выполняется отдельно.
 
 Репозиторий: `git@github.com:vladSHOKO/Muse.git`. Процесс разработки и GitHub Actions описаны в [CONTRIBUTING.md](CONTRIBUTING.md), выпуск на FirstVDS — в инструкции production выше.
 
