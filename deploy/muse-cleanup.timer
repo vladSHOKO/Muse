@@ -1,0 +1,9 @@
+[Unit]
+Description=Process Muse file deletion queue hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# Installed root-owned; application code is always executed as muse.
+set -Eeuo pipefail
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+umask 027
+[[ $EUID == 0 ]] || { echo 'Run through sudo.' >&2; exit 1; }
+action=${1:-}
+case "$action" in
+    deploy) [[ $# == 2 && $2 =~ ^[a-f0-9]{40}$ ]] || exit 2 ;;
+    backup|rollback|cleanup) [[ $# == 1 ]] || exit 2 ;;
+    *) echo 'Usage: muse-ops deploy SHA | backup | rollback | cleanup' >&2; exit 2 ;;
+esac
+exec 9>/run/lock/muse-ops.lock
+flock -w 300 9
+app=/srv/muse
+previous=$(readlink -f "$app/current" || true)
+switched=0
+maintenance=0
+
+as_app() { runuser -u muse -- env APP_ENV=prod APP_DEBUG=0 "$@"; }
+finish() {
+    result=$?
+    trap - EXIT
+    if (( result != 0 && switched == 1 )) && [[ -n $previous && -d $previous ]]; then
+        ln -sfn "$previous" "$app/current.next"
+        mv -Tf "$app/current.next" "$app/current"
+        echo 'Restored previous code. Database migrations are NOT reverted.' >&2
+    fi
+    if (( maintenance == 1 )); then
+        # Keep maintenance enabled if PHP cannot start.
+        if systemctl start php8.3-fpm; then
+            if (( result == 0 )) || [[ -n $previous && -d $previous ]]; then
+                rm -f "$app/maintenance"
+            fi
+        else
+            result=1
+        fi
+    fi
+    exit "$result"
+}
+trap finish EXIT
+
+begin_maintenance() {
+    touch "$app/maintenance"
+    chmod 644 "$app/maintenance"
+    maintenance=1
+    systemctl stop php8.3-fpm
+}
+
+backup() {
+    local destination
+    destination="/var/backups/muse/$(date -u +%Y%m%dT%H%M%SZ)-$$"
+    install -d -m 700 "$destination"
+    runuser -u postgres -- pg_dump --format=custom muse > "$destination/database.dump"
+    tar -C "$app/shared" -czf "$destination/shared.tar.gz" uploads .env.local
+    readlink "$app/current" > "$destination/release.txt" || true
+    (cd "$destination" && sha256sum database.dump shared.tar.gz > SHA256SUMS)
+    touch "$destination/COMPLETE"
+    echo "Backup: $destination"
+    # Retain successful local snapshots for 7 days; FirstVDS keeps external copies.
+    find /var/backups/muse -mindepth 1 -maxdepth 1 -type d -name '20*T*Z-*' -mtime +7 -exec rm -rf -- {} +
+}
+
+if [[ $action == cleanup ]]; then
+    [[ -f "$app/current/bin/console" ]] || exit 0
+    as_app php "$app/current/bin/console" app:files:cleanup
+    exit 0
+fi
+
+if [[ $action == backup ]]; then
+    begin_maintenance
+    backup
+    exit 0
+fi
+
+if [[ $action == deploy ]]; then
+    sha=$2
+    archive="$app/incoming/$sha.tar.gz"
+    [[ -f $archive && ! -L $archive ]] || { echo 'Missing release archive.' >&2; exit 1; }
+    destination="$app/releases/$sha-$(date -u +%Y%m%dT%H%M%SZ)"
+    [[ ! -e $destination ]] || { echo 'Release already exists.' >&2; exit 1; }
+    install -d -o muse -g muse -m 755 "$destination"
+    as_app tar --no-same-owner --no-same-permissions -xzf "$archive" -C "$destination"
+    as_app chmod -R a+rX "$destination/public"
+    [[ -f $destination/vendor/autoload.php && -f $destination/bin/console ]] || exit 1
+    [[ $(cat "$destination/REVISION") == "$sha" ]] || { echo 'Revision mismatch.' >&2; exit 1; }
+    # Production configuration and uploads are never shipped inside artifacts.
+    [[ ! -e $destination/.env.local && ! -e $destination/.env.local.php && ! -e $destination/var ]] || exit 1
+    as_app ln -s "$app/shared/.env.local" "$destination/.env.local"
+    as_app mkdir -p "$destination/var"
+    as_app ln -s "$app/shared/uploads" "$destination/var/uploads"
+    as_app ln -s "$app/shared/log" "$destination/var/log"
+    as_app php "$destination/bin/console" cache:clear
+else
+    destination=$(readlink -f "$app/previous" || true)
+    [[ $destination == "$app/releases/"* && -f $destination/bin/console ]] || { echo 'No previous release.' >&2; exit 1; }
+fi
+
+begin_maintenance
+backup
+if [[ $action == deploy ]]; then
+    as_app php "$destination/bin/console" doctrine:migrations:migrate --no-interaction --all-or-nothing
+    as_app php "$destination/bin/console" doctrine:schema:validate
+fi
+as_app php "$destination/bin/console" doctrine:query:sql 'SELECT 1'
+ln -sfn "$destination" "$app/current.next"
+mv -Tf "$app/current.next" "$app/current"
+switched=1
+systemctl start php8.3-fpm
+rm -f "$app/maintenance"
+curl --fail --location --silent --show-error --retry 3 --retry-delay 2 --max-time 20 \
+    --resolve musetracker.ru:80:127.0.0.1 --resolve musetracker.ru:443:127.0.0.1 \
+    http://musetracker.ru/login >/dev/null
+if [[ -n $previous && -d $previous ]]; then
+    ln -sfn "$previous" "$app/previous"
+fi
+switched=0
+if [[ $action == deploy ]]; then rm -f "$archive"; fi
+echo "Active release: $(basename "$destination")"
