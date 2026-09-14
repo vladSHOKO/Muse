@@ -1,6 +1,8 @@
 # Muse — таск-трекер
 
-Репозиторий: `git@github.com:vladSHOKO/Muse.git`. Процесс разработки, GitHub Actions и публикация описаны в [CONTRIBUTING.md](CONTRIBUTING.md). Production-деплой — следующий отдельный этап.
+Production на FirstVDS и процесс выпуска: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Первый запуск по решению пользователя — HTTP по IP; подключение домена и HTTPS выполняется отдельно.
+
+Репозиторий: `git@github.com:vladSHOKO/Muse.git`. Процесс разработки и GitHub Actions описаны в [CONTRIBUTING.md](CONTRIBUTING.md), выпуск на FirstVDS — в инструкции production выше.
 
 MVP личного таск-трекера на Symfony 7.4 LTS, Twig и PostgreSQL 17. Согласованные требования: [MVP.md](MVP.md).
 

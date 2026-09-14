@@ -1,0 +1,54 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: muse-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yml
+  deploy:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_URL: ${{ vars.DEPLOY_URL }}
+      DEPLOY_USER: muse
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: ctype, fileinfo, iconv, pdo_pgsql, mbstring, intl, dom, xml, xmlwriter
+          tools: composer:v2
+          coverage: none
+      - name: Build the checked commit
+        run: bash deploy/build.sh "$GITHUB_SHA" "$RUNNER_TEMP/muse.tar.gz"
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Upload and activate
+        run: |
+          scp -o BatchMode=yes -o StrictHostKeyChecking=yes "$RUNNER_TEMP/muse.tar.gz" "$DEPLOY_USER@$DEPLOY_HOST:/srv/muse/incoming/$GITHUB_SHA.tar.gz"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "sudo /usr/local/sbin/muse-ops deploy $GITHUB_SHA"
+          curl --fail --location --silent --show-error --retry 3 --max-time 20 "$DEPLOY_URL/login" > /dev/null
+      - name: Remove runner credentials
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519 ~/.ssh/known_hosts

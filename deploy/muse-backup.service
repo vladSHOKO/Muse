@@ -1,0 +1,8 @@
+[Unit]
+Description=Consistent Muse database and attachment backup
+After=postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/muse-ops backup
+TimeoutStartSec=10min

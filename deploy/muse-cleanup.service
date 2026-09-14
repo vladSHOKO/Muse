@@ -1,0 +1,7 @@
+[Unit]
+Description=Retry pending Muse file deletions
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/muse-ops cleanup
+TimeoutStartSec=5min

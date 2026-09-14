@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Muse backup before FirstVDS backup
+
+[Timer]
+OnCalendar=*-*-* 00:30:00 Europe/Moscow
+Persistent=true
+Unit=muse-backup.service
+
+[Install]
+WantedBy=timers.target
