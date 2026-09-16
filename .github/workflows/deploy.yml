@@ -24,7 +24,7 @@ jobs:
       DEPLOY_URL: ${{ vars.DEPLOY_URL }}
       DEPLOY_USER: muse
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: shivammathur/setup-php@v2
