@@ -134,11 +134,11 @@ HTTP по домену и IP возвращает 301 на `https://musetrack.ru
 `deploy/certbot-deploy-hook.sh` установлен как root-owned `/etc/letsencrypt/renewal-hooks/deploy/muse-nginx` с правами 0755: после успешного продления проверяет и перезагружает Nginx. Включён `certbot.timer`. Проверка продления:
 
 ```bash
-certbot renew --dry-run --run-deploy-hooks
+certbot renew --dry-run --run-deploy-hooks --no-random-sleep-on-renew
 systemctl list-timers certbot.timer
 ```
 
-На сервере исправлен домен в `/usr/local/sbin/muse-ops`, чтобы проверка релиза следовала HTTP→HTTPS и проверяла сертификат с правильным именем. Переменная GitHub environment `production` / `DEPLOY_URL` переводится на `https://musetrack.ru`.
+На сервере исправлен домен в `/usr/local/sbin/muse-ops`, чтобы проверка релиза следовала HTTP→HTTPS и проверяла сертификат с правильным именем. Переменная GitHub environment `production` / `DEPLOY_URL` изменена на `https://musetrack.ru`.
 
 Источник: [руководство Certbot: webroot, продление и deploy hooks](https://eff-certbot.readthedocs.io/en/stable/using.html).
 
@@ -152,3 +152,5 @@ systemctl list-timers certbot.timer
 - После добавления `/var/backups/muse` вручную запущен `autobackup.service` FirstVDS. Задание 14.09.2026 в 13:49 МСК завершилось с `Result=success`, `ExecMainStatus=0`. Полное восстановление именно из внешнего хранилища провайдера отдельно не проверялось; выполнен restore локальной согласованной копии.
 - Проверены службы и права: Nginx/PHP/PostgreSQL активны, PostgreSQL слушает только localhost, `.env.local` принадлежит muse и имеет 0600, операторский скрипт принадлежит root и имеет 0755. После запуска около 314 МБ RAM занято, доступно около 641 МБ с учётом кеша; диск занят примерно на 1,5 ГБ из 15 ГБ. Это снимок состояния, а не нагрузочный тест.
 - Первый выпуск не имел предыдущего релиза: автоматический возврат к предыдущему коду при неудачной проверке на этом сервере ещё не проверялся. Логика предусмотрена в `muse-ops`; откат схемы намеренно не автоматизирован.
+
+- 16.09.2026: HTTPS включён. Внешний `/login`: HTTP 200, проверка TLS успешна; HTTP по домену и IP: 301 на HTTPS с сохранением пути. Локальная проверка релиза с `--resolve` и переходом на HTTPS: 200. `nginx -t`, bash-синтаксис и ShellCheck установленных скриптов успешны. Пробное продление `certbot renew --dry-run --run-deploy-hooks --no-random-sleep-on-renew` выполнено через `muse-certbot-renew-check.service`: Result=success, ExecMainStatus=0; deploy-hook проверил и перезагрузил Nginx. `certbot.timer` активен. Первый пробный запуск имел случайную задержку 464 секунды, был остановлен и заменён проверкой без задержки. GitHub `production/DEPLOY_URL` обновлён на HTTPS. Повторный полный CRUD с вложениями и новый выпуск приложения на этом этапе не выполнялись.
