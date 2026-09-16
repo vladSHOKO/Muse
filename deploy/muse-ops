@@ -109,8 +109,8 @@ switched=1
 systemctl start php8.3-fpm
 rm -f "$app/maintenance"
 curl --fail --location --silent --show-error --retry 3 --retry-delay 2 --max-time 20 \
-    --resolve musetracker.ru:80:127.0.0.1 --resolve musetracker.ru:443:127.0.0.1 \
-    http://musetracker.ru/login >/dev/null
+    --resolve musetrack.ru:80:127.0.0.1 --resolve musetrack.ru:443:127.0.0.1 \
+    http://musetrack.ru/login >/dev/null
 if [[ -n $previous && -d $previous ]]; then
     ln -sfn "$previous" "$app/previous"
 fi
