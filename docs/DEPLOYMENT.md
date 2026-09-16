@@ -1,12 +1,12 @@
 # Production Muse — FirstVDS
 
-Актуализировано: 15 сентября 2026 года. Этот документ продолжает [журнал настройки репозитория](REPOSITORY_SETUP.md).
+Актуализировано: 16 сентября 2026 года. Этот документ продолжает [журнал настройки репозитория](REPOSITORY_SETUP.md).
 
 ## Решения и текущее состояние
 
 - Пользователь выбрал FirstVDS для одного пользователя приложения и подтвердил включение автобэкапа провайдера. В корзине была цена 389 ₽; прежние 339 ₽ были оценкой по публичному тарифу, а не подтверждённой ценой заказа.
 - Сервер: `155.212.164.198`, Ubuntu 24.04, 1 vCPU, около 1 ГБ RAM, 15 ГБ диска, swap около 477 МБ. При осмотре существующих приложений не было.
-- Куплен домен `musetrack.ru`. Пользователь отложил настройку DNS/HTTPS и поручил первый запуск по **http://155.212.164.198**. До подключения HTTPS соединение не шифруется.
+- Куплен домен `musetrack.ru`. Первый запуск выполнялся по IP; с 16.09.2026 основной адрес — **https://musetrack.ru**. HTTP по домену и IP перенаправляется на HTTPS.
 - SSH-доступ администратора настроен пользователем через `ssh-copy-id`. Для GitHub Actions создан отдельный ключ пользователя `muse`.
 - Серверный стек: Nginx, PHP-FPM 8.3 из Ubuntu, PostgreSQL 17 из официального PGDG. CI расширен проверкой PHP 8.3, чтобы проверять production-версию.
 - Приложение запущено по IP, первый выпуск `bf7b6250f7748c472616b982ab18673e1010acb2` прошёл через GitHub Actions. Результаты проверок записаны ниже. Изменения этого журнала после запуска не требуют повторного выпуска неизменившегося кода приложения.
@@ -50,7 +50,7 @@ ssh root@155.212.164.198 'bash /root/muse-deploy-setup/bootstrap.sh'
 | Настройка | Тип | Значение/назначение |
 | --- | --- | --- |
 | `DEPLOY_HOST` | Variable | `155.212.164.198` |
-| `DEPLOY_URL` | Variable | `http://155.212.164.198`; после HTTPS заменить на `https://musetrack.ru` |
+| `DEPLOY_URL` | Variable | `https://musetrack.ru` |
 | `DEPLOY_SSH_KEY` | Secret | Отдельный приватный ключ пользователя muse |
 | `DEPLOY_KNOWN_HOSTS` | Secret | Проверенный host key сервера; StrictHostKeyChecking включён |
 
@@ -100,11 +100,11 @@ sudo systemctl show muse-backup.service autobackup.service -p Result -p ExecMain
 - Обновления системных пакетов и смена major-версии PostgreSQL — отдельные операции. Сохранены существующие unattended-upgrades и firewall FirstVDS.
 - Изменения `deploy/muse-ops`, PHP/Nginx/systemd-конфигураций после PR устанавливаются администратором: обычный деплой приложения не заменяет root-owned файлы автоматически.
 
-## Подключение домена и HTTPS позже
+## Домен и HTTPS
 
 ### Где настроить DNS в FirstVDS
 
-15.09.2026 пользователь уточнил купленный домен: `musetrack.ru`; прежнее `musetracker.ru` было ошибкой. В исходных конфигурациях Nginx и проверки релиза адрес исправлен; на действующем сервере эти изменения пока не применены.
+15.09.2026 пользователь уточнил купленный домен: `musetrack.ru`; прежнее `musetracker.ru` было ошибкой. В исходных конфигурациях Nginx и проверки релиза адрес исправлен; на действующем сервере исправления применены 16.09.2026 при включении HTTPS.
 
 Проверка 15.09.2026: запросы A и NS для `musetrack.ru` через Google Public DNS вернули NXDOMAIN (`Status: 3`, SOA зоны `ru`). Публичное делегирование этим запросом не обнаружено; результат не подтверждает отсутствие покупки. Статус регистрации и выбранные NS нужно проверить в кабинете регистратора. Настройки DNS в кабинете и HTTPS на сервере на этом этапе не изменялись.
 
@@ -117,13 +117,30 @@ sudo systemctl show muse-backup.service autobackup.service -p Result -p ExecMain
 
 Источники: [создание зоны в DNSmanager](https://firstvds.ru/technology/sozdanie-domennykh-dns-zapisey-s-pomoschyu-dnsmanager), [изменение DNS-записей](https://firstvds.ru/technology/kak-izmenit-dns-zapisi-domena), [смена NS домена FirstVDS](https://firstvds.ru/technology/change-domain-ns). Интерфейс личного кабинета пользователя пока не просмотрен; названия разделов взяты из официальных инструкций.
 
-### После настройки DNS
+### Установка HTTPS 16.09.2026
 
-1. Настроить A-запись `musetrack.ru` на `155.212.164.198` у действующего DNS-провайдера; проверить разрешение извне.
-2. Выпустить сертификат через установленный Certbot: `certbot --nginx -d musetrack.ru` (email задаёт владелец), включить перенаправление на HTTPS.
-3. Проверить `certbot renew --dry-run`, вход, скачивание вложений и временные ссылки по HTTPS.
-4. Заменить GitHub Variable `DEPLOY_URL` на `https://musetrack.ru`, проверить следующий деплой. Определить поведение прямого обращения по IP отдельно от доменного vhost.
-5. Обновить этот документ и AGENTS.md через PR.
+Публичный DNS исправлен пользователем: `musetrack.ru` разрешается в IP сервера, AAAA отсутствует. Сертификат Let’s Encrypt выдан для `musetrack.ru`, срок текущего сертификата — до 15.12.2026. Аккаунт ACME создан без email. Приватный ключ остаётся только на сервере.
+
+Команда выпуска (после настройки DNS и HTTP-vhost):
+
+```bash
+certbot certonly --webroot -w /var/www/letsencrypt -d musetrack.ru --non-interactive --agree-tos --register-unsafely-without-email
+```
+
+Затем установить `deploy/nginx-https.conf` в `/etc/nginx/sites-available/muse`, выполнить `nginx -t` и `systemctl reload nginx`. Исходная конфигурация сохранена в `/root/muse-nginx.before-https.conf`. `deploy/nginx.conf` остаётся конфигурацией первичной установки без сертификата; HTTPS-вариант устанавливать только после выпуска сертификата. Bootstrap сохраняет существующий vhost.
+
+HTTP по домену и IP возвращает 301 на `https://musetrack.ru` с сохранением пути и параметров. Путь `/.well-known/acme-challenge/` остаётся доступным по HTTP для продления. HTTPS включает TLS 1.2/1.3 и передаёт признак HTTPS в PHP. Сертификат предназначен для домена; для прямого обращения используйте HTTP по IP с перенаправлением, а не HTTPS по IP.
+
+`deploy/certbot-deploy-hook.sh` установлен как root-owned `/etc/letsencrypt/renewal-hooks/deploy/muse-nginx` с правами 0755: после успешного продления проверяет и перезагружает Nginx. Включён `certbot.timer`. Проверка продления:
+
+```bash
+certbot renew --dry-run --run-deploy-hooks
+systemctl list-timers certbot.timer
+```
+
+На сервере исправлен домен в `/usr/local/sbin/muse-ops`, чтобы проверка релиза следовала HTTP→HTTPS и проверяла сертификат с правильным именем. Переменная GitHub environment `production` / `DEPLOY_URL` переводится на `https://musetrack.ru`.
+
+Источник: [руководство Certbot: webroot, продление и deploy hooks](https://eff-certbot.readthedocs.io/en/stable/using.html).
 
 ## Журнал проверок
 
