@@ -9,7 +9,7 @@
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const mobile = window.matchMedia('(max-width: 720px)');
     const storageKey = 'muse.cat.hidden';
-    const stateKey = 'muse.cat.state.v1';
+    const stateKey = 'muse.cat.state.v2';
     let hidden = false;
     try { hidden = localStorage.getItem(storageKey) === '1'; } catch { /* Storage is optional. */ }
     let x = 12;
@@ -24,6 +24,8 @@
     let lastClick = -Infinity;
     const random = (min, max) => min + Math.random() * (max - min);
     const limit = () => Math.max(0, lane.clientWidth - 64);
+    const bedPosition = () => limit();
+    const roamLimit = () => Math.max(0, bedPosition() - 72);
     const position = () => { companion.style.transform = `translateX(${Math.round(x / 2) * 2}px)`; };
     const save = () => {
         try { sessionStorage.setItem(stateKey, JSON.stringify({ x, target, state, elapsed, duration, direction, resting })); } catch { /* Storage is optional. */ }
@@ -31,20 +33,27 @@
     const render = () => {
         position();
         cat.dataset.state = state;
-        cat.dataset.frame = String(reducedMotion.matches ? 0 : Math.floor(elapsed / (state === 'walk' ? 180 : 650)) % 2);
+        cat.dataset.frame = String(reducedMotion.matches ? 0 : Math.floor(elapsed / (state === 'walk' || state === 'bed-walk' ? 180 : 650)) % 2);
         cat.style.setProperty('--cat-direction', String(direction));
         const phase = reducedMotion.matches ? 0 : (elapsed % 1200) / 1200;
         cat.style.setProperty('--heart-rise', `${-Math.floor(phase * 2)}px`);
         cat.style.setProperty('--heart-opacity', String(1 - phase * 0.6));
     };
-    const enter = (next) => {
+    const enter = (next, leavingBed = false) => {
         state = next;
         elapsed = 0;
         duration = next === 'sleep' ? random(22000, 42000) : random(5000, 10000);
+        if (next === 'bed-sleep') duration = random(26000, 46000);
         if (next === 'love') duration = 4000;
         if (next === 'walk') {
-            target = Math.max(0, Math.min(limit(), x + random(60, mobile.matches ? 130 : 300) * (Math.random() < 0.5 ? -1 : 1)));
+            target = leavingBed
+                ? Math.max(0, x - random(70, mobile.matches ? 140 : 320))
+                : Math.max(0, Math.min(roamLimit(), x + random(60, mobile.matches ? 130 : 300) * (Math.random() < 0.5 ? -1 : 1)));
             direction = target < x ? -1 : 1;
+        }
+        if (next === 'bed-walk') {
+            target = bedPosition();
+            direction = 1;
         }
         render();
         save();
@@ -53,17 +62,20 @@
         const delta = lastTime === null ? 0 : Math.min(time - lastTime, 100);
         lastTime = time;
         if (!resting) elapsed += delta;
-        if (state === 'walk') {
+        if (state === 'walk' || state === 'bed-walk') {
             const distance = target - x;
             const step = delta * 0.025;
             x += Math.sign(distance) * Math.min(Math.abs(distance), step);
             position();
-            if (Math.abs(target - x) < 1) enter('sit');
+            if (Math.abs(target - x) < 1) enter(state === 'bed-walk' ? 'bed-sleep' : 'sit');
         } else if (!resting && elapsed >= duration) {
-            if (state === 'sleep' || state === 'groom' || state === 'love') enter('sit');
+            if (state === 'bed-sleep') enter('walk', true);
+            else if (state === 'sleep' || state === 'groom' || state === 'love') enter('sit');
             else {
                 const choice = Math.random();
-                enter(choice < (mobile.matches ? 0.15 : 0.3) ? 'walk' : choice < 0.55 ? 'groom' : 'sleep');
+                const bedChance = mobile.matches ? 0.12 : 0.18;
+                const walkChance = mobile.matches ? 0.22 : 0.4;
+                enter(choice < bedChance ? 'bed-walk' : choice < walkChance ? 'walk' : choice < 0.65 ? 'groom' : 'sleep');
             }
         }
         render();
@@ -75,8 +87,12 @@
         lastTime = null;
         lane.hidden = hidden;
         if (!hidden) {
-            x = Math.min(x, limit());
-            target = Math.min(target, limit());
+            if (state === 'bed-walk') target = bedPosition();
+            if (state === 'bed-sleep') x = target = bedPosition();
+            else {
+                x = Math.min(x, limit());
+                target = Math.min(target, limit());
+            }
         }
         topbar.classList.toggle('cat-is-hidden', hidden);
         toggle.textContent = hidden ? 'Показать котика' : 'Скрыть котика';
@@ -87,7 +103,7 @@
     };
     try {
         const saved = JSON.parse(sessionStorage.getItem(stateKey));
-        if (saved && ['sit', 'walk', 'groom', 'sleep', 'love'].includes(saved.state)
+        if (saved && ['sit', 'walk', 'groom', 'sleep', 'love', 'bed-walk', 'bed-sleep'].includes(saved.state)
             && ['x', 'target', 'elapsed', 'duration'].every((key) => Number.isFinite(saved[key]) && saved[key] >= 0)
             && saved.duration <= 60000 && saved.elapsed <= 60000
             && [1, -1].includes(saved.direction) && typeof saved.resting === 'boolean'
@@ -130,8 +146,12 @@
     reducedMotion.addEventListener('change', sync);
     window.addEventListener('resize', () => {
         if (hidden) return;
-        x = Math.min(x, limit());
-        target = Math.min(target, limit());
+        if (state === 'bed-walk') target = bedPosition();
+        if (state === 'bed-sleep') x = target = bedPosition();
+        else {
+            x = Math.min(x, limit());
+            target = Math.min(target, limit());
+        }
         position();
     });
     x = Math.min(x, limit());
