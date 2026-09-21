@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 final class ChecklistController extends AppController
 {
@@ -47,6 +48,35 @@ final class ChecklistController extends AppController
         return $this->back($task, $request->request->getString('context'));
     }
 
+    #[Route('/checklist/{id}/edit', name: 'app_checklist_edit', requirements: ['id' => '\\d+'], methods: ['POST'])]
+    public function edit(ChecklistItem $item, Request $request, EntityManagerInterface $em, ValidatorInterface $validator): Response
+    {
+        $this->requireOwner($item);
+        $this->requireCsrf($request, 'checklist-edit'.$item->getId());
+        $context = $request->request->getString('context');
+        if (!in_array($context, ['task', 'block', 'overview'], true)) {
+            throw new BadRequestHttpException('Invalid checklist context.');
+        }
+        $originalTitle = $item->getTitle();
+        $item->setTitle($request->request->getString('title'));
+        $errors = $validator->validate($item);
+        if (count($errors) > 0) {
+            $item->setTitle($originalTitle);
+            $message = $errors->get(0)->getMessage();
+            if ($request->isXmlHttpRequest()) {
+                return $this->json(['error' => $message], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+            $this->addFlash('error', $message);
+            return $this->back($item->getTask(), $context);
+        }
+        $item->getTask()->touch();
+        $em->flush();
+        if ($request->isXmlHttpRequest()) {
+            return $this->json(['title' => $item->getTitle()]);
+        }
+        return $this->back($item->getTask(), $context);
+    }
+
     #[Route('/checklist/{id}/delete', name: 'app_checklist_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function delete(ChecklistItem $item, Request $request, EntityManagerInterface $em): Response
     {
@@ -61,12 +91,17 @@ final class ChecklistController extends AppController
 
     private function back(Task $task, string $context): Response
     {
+        return $this->redirect($this->backUrl($task, $context), Response::HTTP_SEE_OTHER);
+    }
+
+    private function backUrl(Task $task, string $context): string
+    {
         if ($context === 'overview') {
-            return $this->redirect($this->generateUrl('app_tasks').'#checklist-'.$task->getId(), Response::HTTP_SEE_OTHER);
+            return $this->generateUrl('app_tasks').'#checklist-'.$task->getId();
         }
         $url = $context === 'block'
             ? $this->generateUrl('app_tasks', ['block' => $task->getBlock()->getId(), 'status' => $task->isCompleted() ? 'completed' : null])
             : $this->generateUrl('app_task_show', ['id' => $task->getId()]);
-        return $this->redirect($url.'#checklist-'.$task->getId(), Response::HTTP_SEE_OTHER);
+        return $url.'#checklist-'.$task->getId();
     }
 }

@@ -44,6 +44,39 @@ document.querySelectorAll('[data-checklist-collapse]').forEach((button) => {
     });
 });
 
+// The server-side fallback returns to the checklist fragment. With JavaScript,
+// keep the add form at the same visual position instead of jumping to the anchor.
+const checklistScrollKey = 'muse.checklist.add-scroll';
+document.querySelectorAll('form[data-checklist-add]').forEach((form) => {
+    form.addEventListener('submit', () => {
+        try {
+            sessionStorage.setItem(checklistScrollKey, JSON.stringify({
+                path: `${location.pathname}${location.search}`,
+                formId: form.id,
+                top: form.getBoundingClientRect().top,
+                savedAt: Date.now(),
+            }));
+        } catch {
+            // Storage restrictions leave the normal fragment navigation intact.
+        }
+    });
+});
+window.addEventListener('load', () => {
+    try {
+        const saved = JSON.parse(sessionStorage.getItem(checklistScrollKey) || 'null');
+        sessionStorage.removeItem(checklistScrollKey);
+        if (!saved || saved.path !== `${location.pathname}${location.search}` || Date.now() - saved.savedAt > 30000) return;
+        const form = document.getElementById(saved.formId);
+        if (!form || typeof saved.top !== 'number') return;
+        requestAnimationFrame(() => {
+            window.scrollBy(0, form.getBoundingClientRect().top - saved.top);
+            if (location.hash.startsWith('#checklist-')) history.replaceState(null, '', `${location.pathname}${location.search}`);
+        });
+    } catch {
+        // A failed restoration must not affect adding checklist items.
+    }
+}, { once: true });
+
 // Submit a desired state (not an inversion), so retrying a request is safe.
 document.querySelectorAll('form[data-checklist-complete]').forEach((form) => {
     form.addEventListener('submit', async (event) => {
@@ -73,6 +106,75 @@ document.querySelectorAll('form[data-checklist-complete]').forEach((form) => {
             error.hidden = false;
         } finally {
             button.disabled = false;
+        }
+    });
+});
+
+document.querySelectorAll('form[data-checklist-edit]').forEach((form) => {
+    const item = form.closest('.checklist-item');
+    const complete = item.querySelector('[data-checklist-complete]');
+    const actions = item.querySelector('[data-checklist-view-actions]');
+    const trigger = actions.querySelector('[data-checklist-edit-start]');
+    const cancel = form.querySelector('[data-checklist-edit-cancel]');
+    const input = form.querySelector('[name="title"]');
+    const title = complete.querySelector('.checklist-title');
+    const save = form.querySelector('[type="submit"]');
+    const checklist = form.closest('.checklist');
+    const error = checklist.querySelector('.checklist-error');
+    const close = () => {
+        input.value = title.textContent;
+        form.hidden = true;
+        complete.hidden = false;
+        actions.hidden = false;
+        trigger.focus();
+    };
+
+    trigger.hidden = false;
+    trigger.addEventListener('click', () => {
+        input.value = title.textContent;
+        complete.hidden = true;
+        actions.hidden = true;
+        form.hidden = false;
+        error.hidden = true;
+        input.focus();
+        input.select();
+    });
+    cancel.addEventListener('click', close);
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') close();
+    });
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (save.disabled) return;
+        save.disabled = true;
+        cancel.disabled = true;
+        error.hidden = true;
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            });
+            let result = {};
+            try { result = await response.json(); } catch { /* Non-JSON failures use the generic message below. */ }
+            if (!response.ok || typeof result.title !== 'string') {
+                throw new Error(typeof result.error === 'string' ? result.error : 'Не удалось сохранить пункт.');
+            }
+            title.textContent = result.title;
+            input.value = result.title;
+            input.defaultValue = result.title;
+            trigger.setAttribute('aria-label', `Изменить пункт «${result.title}»`);
+            actions.querySelector('.checklist-delete').setAttribute('aria-label', `Удалить пункт «${result.title}»`);
+            close();
+        } catch (requestError) {
+            error.textContent = requestError instanceof Error && requestError.message
+                ? requestError.message
+                : 'Не удалось сохранить пункт. Повторите попытку.';
+            error.hidden = false;
+            input.focus();
+        } finally {
+            save.disabled = false;
+            cancel.disabled = false;
         }
     });
 });
