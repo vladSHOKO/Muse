@@ -18,10 +18,23 @@
                         <input type="hidden" name="context" value="{{ context }}">
                         <button class="checklist-toggle" type="submit" role="checkbox" aria-checked="{{ item.completed ? 'true' : 'false' }}"><span class="task-state" aria-hidden="true">{{ item.completed ? '✓' : '' }}</span><span class="checklist-title">{{ item.title }}</span></button>
                     </form>
-                    <form method="post" action="{{ path('app_checklist_delete', {id: item.id}) }}" data-confirm="Удалить этот пункт чек-листа?">
-                        <input type="hidden" name="_token" value="{{ csrf_token('checklist-delete' ~ item.id) }}">
+                    <div class="checklist-item-actions" data-checklist-view-actions>
+                        <button class="button quiet small checklist-edit-trigger" type="button" data-checklist-edit-start aria-label="Изменить пункт «{{ item.title }}»" title="Изменить" hidden>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>
+                        </button>
+                        <form method="post" action="{{ path('app_checklist_delete', {id: item.id}) }}" data-confirm="Удалить этот пункт чек-листа?">
+                            <input type="hidden" name="_token" value="{{ csrf_token('checklist-delete' ~ item.id) }}">
+                            <input type="hidden" name="context" value="{{ context }}">
+                            <button class="button quiet small checklist-delete" type="submit" aria-label="Удалить пункт «{{ item.title }}»">×</button>
+                        </form>
+                    </div>
+                    <form class="checklist-edit-inline" method="post" action="{{ path('app_checklist_edit', {id: item.id}) }}" data-checklist-edit hidden>
+                        <input type="hidden" name="_token" value="{{ csrf_token('checklist-edit' ~ item.id) }}">
                         <input type="hidden" name="context" value="{{ context }}">
-                        <button class="button quiet small checklist-delete" type="submit" aria-label="Удалить пункт «{{ item.title }}»">×</button>
+                        <label class="visually-hidden" for="checklist-edit-{{ item.id }}">Текст пункта</label>
+                        <input id="checklist-edit-{{ item.id }}" class="checklist-edit-input" type="text" name="title" value="{{ item.title }}" maxlength="200" required autocomplete="off">
+                        <button class="button secondary small checklist-edit-save" type="submit" aria-label="Сохранить изменения" title="Сохранить">✓</button>
+                        <button class="button quiet small checklist-edit-cancel" type="button" data-checklist-edit-cancel aria-label="Отменить изменения" title="Отменить">×</button>
                     </form>
                 {% endif %}
             </li>
@@ -29,7 +42,7 @@
     </ul>
     {% if not public_access %}
         <p class="checklist-error" role="alert" hidden></p>
-        {{ form_start(form, {attr: {class: 'checklist-add'}}) }}
+        {{ form_start(form, {attr: {class: 'checklist-add', 'data-checklist-add': ''}}) }}
             {{ form_errors(form) }}
             <div class="checklist-add-field">{{ form_label(form.title, null, {label_attr: {class: 'visually-hidden'}}) }}{{ form_widget(form.title) }}{{ form_errors(form.title) }}</div>
             <button class="button secondary small" type="submit">Добавить</button>

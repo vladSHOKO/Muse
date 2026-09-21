@@ -705,6 +705,7 @@ final class ApplicationTest extends WebTestCase
         foreach (['block', 'task', 'overview'] as $context) {
             $url = match ($context) { 'block' => '/?block='.$this->blockId, 'overview' => '/', default => '/tasks/'.$this->taskId };
             $crawler = $this->client->request('GET', $url);
+            self::assertSelectorExists('form.checklist-add[data-checklist-add]');
             $form = $crawler->filter('.checklist-add')->form();
             $values = $form->getPhpValues();
             $values['checklist_'.$this->taskId]['title'] = 'Пункт из '.$context;
@@ -716,6 +717,47 @@ final class ApplicationTest extends WebTestCase
         }
         self::assertSame(5, $this->em()->getRepository(ChecklistItem::class)->count([]));
         self::assertSame(2, $this->em()->getRepository(Task::class)->count([]));
+    }
+
+    public function testChecklistItemCanBeEditedInline(): void
+    {
+        $share = $this->share($this->taskId);
+        $this->client->loginUser($this->alice);
+        $crawler = $this->client->request('GET', '/?block='.$this->blockId);
+        self::assertSelectorExists('[data-checklist-edit-start][hidden]');
+        $form = $crawler->filter('form[data-checklist-edit]')->first()->form();
+        $values = $form->getPhpValues();
+        $values['title'] = '  Переписать материалы  ';
+        $this->client->request('POST', $form->getUri(), $values, [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);
+        self::assertResponseIsSuccessful();
+        self::assertSame(['title' => 'Переписать материалы'], json_decode($this->client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR));
+        $this->em()->clear();
+        self::assertSame('Переписать материалы', $this->em()->find(ChecklistItem::class, $this->itemId)->getTitle());
+
+        $this->client->request('GET', '/tasks/'.$this->taskId);
+        self::assertSelectorTextContains('.checklist-title', 'Переписать материалы');
+        $this->client->restart();
+        $this->client->request('GET', '/s/'.$share['token']);
+        self::assertSelectorTextContains('.checklist-title', 'Переписать материалы');
+        self::assertSelectorNotExists('[data-checklist-edit]');
+        self::assertSelectorNotExists('[data-checklist-edit-start]');
+    }
+
+    public function testChecklistEditValidatesTitleAndKeepsOriginalOnError(): void
+    {
+        $this->client->loginUser($this->alice);
+        foreach (['   ', str_repeat('x', 201)] as $invalidTitle) {
+            $crawler = $this->client->request('GET', '/tasks/'.$this->taskId);
+            $form = $crawler->filter('form[data-checklist-edit]')->first()->form();
+            $values = $form->getPhpValues();
+            $values['title'] = $invalidTitle;
+            $this->client->request('POST', $form->getUri(), $values, [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);
+            self::assertResponseStatusCodeSame(422);
+            $result = json_decode($this->client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
+            self::assertArrayHasKey('error', $result);
+            $this->em()->clear();
+            self::assertSame('Собрать материалы', $this->em()->find(ChecklistItem::class, $this->itemId)->getTitle());
+        }
     }
 
     public function testChecklistAjaxCompletionIsReversibleAndIdempotent(): void
@@ -765,13 +807,13 @@ final class ApplicationTest extends WebTestCase
         $this->client->request('POST', '/checklist/'.$this->itemId.'/complete', ['completed' => '1']);
         self::assertResponseRedirects('/login');
         $this->client->loginUser($this->bob);
-        foreach (['/tasks/'.$this->taskId.'/checklist', '/checklist/'.$this->itemId.'/complete', '/checklist/'.$this->itemId.'/delete'] as $url) {
-            $this->client->request('POST', $url, ['completed' => '1']);
+        foreach (['/tasks/'.$this->taskId.'/checklist', '/checklist/'.$this->itemId.'/complete', '/checklist/'.$this->itemId.'/edit', '/checklist/'.$this->itemId.'/delete'] as $url) {
+            $this->client->request('POST', $url, ['completed' => '1', 'title' => 'Чужое изменение']);
             self::assertResponseStatusCodeSame(404);
         }
         $this->client->loginUser($this->alice);
-        foreach (['complete', 'delete'] as $action) {
-            $this->client->request('POST', '/checklist/'.$this->itemId.'/'.$action, ['completed' => '1']);
+        foreach (['complete', 'edit', 'delete'] as $action) {
+            $this->client->request('POST', '/checklist/'.$this->itemId.'/'.$action, ['completed' => '1', 'title' => 'Без токена']);
             self::assertResponseStatusCodeSame(403);
         }
         $this->client->request('POST', '/tasks/'.$this->taskId.'/checklist', ['checklist_'.$this->taskId => ['title' => 'Invalid', 'context' => 'task']]);

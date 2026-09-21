@@ -1,7 +1,7 @@
 framework:
   secret: '%env(APP_SECRET)%'
   assets:
-    version: 'muse-priority-compact-1'
+    version: 'muse-checklist-edit-2'
   default_locale: ru
   csrf_protection: true
   form: true
